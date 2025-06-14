@@ -6,7 +6,4 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-backtrace = "0.3.68"
-uuid = { version = "1.4", features = ["v4"] }
+crash-handler = "0.5.1"
