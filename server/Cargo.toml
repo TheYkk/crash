@@ -12,4 +12,5 @@ anyhow = "1.0"
 memmap2 = "0.9"
 minidump = "0.25"
 minidump-processor = "0.25"
-uuid = { version = "1.4", features = ["v4"] } 
+uuid = { version = "1.4", features = ["v4"] }
+breakpad-symbols = "0.25" 

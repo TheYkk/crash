@@ -4,7 +4,9 @@ import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Clock, AlertCircle, Monitor, Package, Layers, Info } from 'lucide-react';
+import { Clock, AlertCircle, Monitor, Package, Layers, Info, Code, Eye, EyeOff } from 'lucide-react';
+import { ThemeToggle } from './ThemeToggle';
+import { Button } from './ui/button';
 
 interface CrashSummary {
   id: string;
@@ -69,12 +71,24 @@ const formatBytes = (bytes: number) => {
   return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + ' ' + sizes[i];
 };
 
+const projectRoot = '/Users/kaan/working/rust/crash/';
+
+const isAppFrame = (frame: StackFrame) => {
+  return frame.filename && frame.filename.startsWith(projectRoot);
+}
+
+const formatPath = (path: string | undefined) => {
+  if (!path) return 'unknown';
+  return path.replace(projectRoot, 'app://');
+}
+
 const CrashViewer: React.FC = () => {
   const [crashes, setCrashes] = useState<CrashSummary[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<CrashDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showSystemFrames, setShowSystemFrames] = useState(true);
 
   // fetch list
   useEffect(() => {
@@ -95,39 +109,48 @@ const CrashViewer: React.FC = () => {
       .finally(() => setLoading(false));
   }, [selected]);
 
-  const renderStackTrace = (frames: StackFrame[]) => (
-    <div className="space-y-2">
-      {frames.map((frame, index) => (
-        <Card key={index} className="p-3">
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <code className="text-sm font-medium text-primary">
-                {frame.function}
-              </code>
-              <Badge variant="outline">#{frames.length - index}</Badge>
-            </div>
-            {frame.filename && (
-              <div className="text-xs text-muted-foreground">
-                <span className="font-medium">File:</span> {frame.filename}
-                {frame.lineno && (
-                  <>
-                    <span className="mx-1">•</span>
-                    <span className="font-medium">Line:</span> {frame.lineno}
-                  </>
-                )}
-                {frame.colno && (
-                  <>
-                    <span className="mx-1">•</span>
-                    <span className="font-medium">Col:</span> {frame.colno}
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
+  const renderStackTrace = (frames: StackFrame[]) => {
+    const filteredFrames = showSystemFrames ? frames : frames.filter(isAppFrame);
+    return (
+        <div className="space-y-2">
+        {filteredFrames.map((frame, index) => {
+            const isApp = isAppFrame(frame);
+            return (
+                <Card key={index} className={`p-3 ${isApp ? 'border-primary/50 bg-primary/5' : ''}`}>
+                <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                    <code className={`text-sm font-medium ${isApp ? 'text-primary' : 'text-foreground'}`}>
+                        {frame.function}
+                    </code>
+                    <div className='flex items-center gap-2'>
+                        {isApp && <Badge variant="secondary">App</Badge>}
+                        <Badge variant="outline">#{frames.length - index}</Badge>
+                    </div>
+                    </div>
+                    {frame.filename && (
+                    <div className="text-xs text-muted-foreground">
+                        <span className="font-medium">File:</span> {formatPath(frame.filename)}
+                        {frame.lineno && (
+                        <>
+                            <span className="mx-1">•</span>
+                            <span className="font-medium">Line:</span> {frame.lineno}
+                        </>
+                        )}
+                        {frame.colno && (
+                        <>
+                            <span className="mx-1">•</span>
+                            <span className="font-medium">Col:</span> {frame.colno}
+                        </>
+                        )}
+                    </div>
+                    )}
+                </div>
+                </Card>
+            )
+        })}
+        </div>
+    );
+  }
 
   const renderModules = (modules: Module[]) => (
     <div className="space-y-2">
@@ -153,53 +176,54 @@ const CrashViewer: React.FC = () => {
   );
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background text-foreground">
       {/* Sidebar */}
-      <div className="w-1/3 border-r border-border">
-        <Card className="h-full rounded-none border-0">
+      <div className="w-1/3 border-r border-border flex flex-col">
+        <Card className="rounded-none border-0 border-b">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5" />
-              Crash Reports
-            </CardTitle>
+            <div className='flex justify-between items-center'>
+                <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" />
+                Crash Reports
+                </CardTitle>
+                <ThemeToggle />
+            </div>
             <CardDescription>
               {crashes.length} crash{crashes.length !== 1 ? 'es' : ''} found
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[calc(100vh-120px)]">
-              <div className="p-4 space-y-2">
-                {crashes.map((crash) => (
-                  <Card
-                    key={crash.id}
-                    className={`cursor-pointer transition-colors hover:bg-accent ${
-                      selected === crash.id ? 'bg-accent border-primary' : ''
-                    }`}
-                    onClick={() => setSelected(crash.id)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Badge variant="destructive">CRASH</Badge>
-                          <div className="flex items-center text-xs text-muted-foreground">
-                            <Clock className="w-3 h-3 mr-1" />
-                            {crash.timestamp && formatTimestamp(crash.timestamp)}
-                          </div>
-                        </div>
-                        <div className="font-mono text-xs truncate text-muted-foreground">
-                          {crash.id}
-                        </div>
-                        <div className="text-sm font-medium line-clamp-2">
-                          {crash.message || 'No message available'}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </ScrollArea>
-          </CardContent>
         </Card>
+        <ScrollArea className="flex-1">
+            <div className="p-4 space-y-2">
+            {crashes.map((crash) => (
+                <Card
+                key={crash.id}
+                className={`cursor-pointer transition-colors hover:bg-accent ${
+                    selected === crash.id ? 'bg-accent border-primary' : ''
+                }`}
+                onClick={() => setSelected(crash.id)}
+                >
+                <CardContent className="p-4">
+                    <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <Badge variant="destructive">CRASH</Badge>
+                        <div className="flex items-center text-xs text-muted-foreground">
+                        <Clock className="w-3 h-3 mr-1" />
+                        {crash.timestamp && formatTimestamp(crash.timestamp)}
+                        </div>
+                    </div>
+                    <div className="font-mono text-xs truncate text-muted-foreground">
+                        {crash.id}
+                    </div>
+                    <div className="text-sm font-medium line-clamp-2">
+                        {crash.message || 'No message available'}
+                    </div>
+                    </div>
+                </CardContent>
+                </Card>
+            ))}
+            </div>
+        </ScrollArea>
       </div>
 
       {/* Main Content */}
@@ -278,10 +302,16 @@ const CrashViewer: React.FC = () => {
                 <TabsContent value="stacktrace" className="h-full">
                   <Card className="h-full">
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Layers className="w-4 h-4" />
-                        Stack Trace ({detail.sentry_report.stacktrace.frames.length} frames)
-                      </CardTitle>
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2">
+                                <Layers className="w-4 h-4" />
+                                Stack Trace ({detail.sentry_report.stacktrace.frames.length} frames)
+                            </CardTitle>
+                            <Button variant="outline" size="sm" onClick={() => setShowSystemFrames(!showSystemFrames)}>
+                                {showSystemFrames ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+                                {showSystemFrames ? 'Hide' : 'Show'} System Frames
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent>
                       <ScrollArea className="h-[calc(100vh-480px)]">

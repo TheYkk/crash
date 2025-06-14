@@ -441,6 +441,7 @@ version = "0.1.0"
 dependencies = [
  "actix-web",
  "anyhow",
+ "breakpad-symbols",
  "memmap2",
  "minidump",
  "minidump-processor",

@@ -2,6 +2,9 @@ use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 use serde::Serialize;
 use std::fs;
 use anyhow::Context;
+use breakpad_symbols::{SimpleSymbolSupplier, Symbolizer};
+use minidump::Minidump;
+use minidump_processor::process_minidump;
 
 // ----- Data structures returned by the API -----
 #[derive(Serialize)]
@@ -14,8 +17,10 @@ struct CrashSummary {
 #[derive(Serialize)]
 struct CrashDetail {
     sentry_report: serde_json::Value,
-    // Limited subset of minidump information that is inexpensive to compute.
+    // Summary compatible with the frontend
     minidump_summary: Option<serde_json::Value>,
+    // Full analysis for future use (not yet consumed by the frontend)
+    minidump_analysis: Option<serde_json::Value>,
 }
 
 const CRASH_REPORT_PREFIX: &str = "crash_report_"; // .json
@@ -46,132 +51,82 @@ fn load_sentry_json(id: &str) -> anyhow::Result<serde_json::Value> {
     Ok(json)
 }
 
-fn summarize_minidump(id: &str) -> anyhow::Result<serde_json::Value> {
-    use minidump::*;
-
+async fn analyze_minidump(id: &str) -> anyhow::Result<(serde_json::Value, serde_json::Value)> {
     let path = format!("{}{}.dmp", MINIDUMP_PREFIX, id);
     let dump = Minidump::read_path(&path)
-        .with_context(|| format!("Unable to open minidump {}", path))?;
+        .with_context(|| format!("Failed to read minidump {}", path))?;
 
-    // We'll gather a handful of useful details that are cheap to compute.
-    let mut summary = serde_json::Map::new();
+    // We can pass an empty list of symbol servers. This will prevent any network
+    // access, and limit symbolication to local files. For this example, we don't
+    // have any local symbol files, so this will be equivalent to no symbolication.
+    let provider = Symbolizer::new(SimpleSymbolSupplier::new(Vec::new()));
 
-    // Capture OS/CPU enums for later use when decoding the exception.
-    let mut os_enum = None;
-    let mut cpu_enum = None;
+    let state = process_minidump(&dump, &provider)
+        .await
+        .with_context(|| format!("Failed to process minidump {}", path))?;
 
-    // System (OS/CPU) ----------------
-    let sys_stream = dump.get_stream::<MinidumpSystemInfo>();
-    if let Ok(ref sys) = sys_stream {
-        os_enum = Some(sys.os);
-        cpu_enum = Some(sys.cpu);
+    let mut json_output = Vec::new();
+    state.print_json(&mut json_output, false)?;
+    let json: serde_json::Value = serde_json::from_slice(&json_output)
+        .with_context(|| "Failed to serialize minidump analysis")?;
 
-        summary.insert("os".into(), serde_json::json!({
-            "family": format!("{:?}", sys.os),
-            "cpu": format!("{:?}", sys.cpu),
-        }));
-    }
+    // ---------- Build compatibility summary ----------
+    let modules_list = json
+        .get("modules")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
 
-    // Exception ----------------------
-    if let Ok(exc) = dump.get_stream::<MinidumpException>() {
-        let reason_str = if let (Some(os), Some(cpu)) = (os_enum, cpu_enum) {
-            format!("{:?}", exc.get_crash_reason(os, cpu))
-        } else {
-            "Unknown".to_string()
-        };
+    let simplified_modules: Vec<serde_json::Value> = modules_list
+        .iter()
+        .map(|m| {
+            let base_addr = m
+                .get("base_addr")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default();
+            let end_addr = m
+                .get("end_addr")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default();
+            // size = end - base if both parse OK
+            let size = if let (Ok(start), Ok(end)) = (
+                u64::from_str_radix(base_addr.trim_start_matches("0x"), 16),
+                u64::from_str_radix(end_addr.trim_start_matches("0x"), 16),
+            ) {
+                end.saturating_sub(start)
+            } else {
+                0
+            };
 
-        summary.insert(
-            "exception".into(),
             serde_json::json!({
-                "reason": reason_str,
-                "thread_id": exc.thread_id,
-            }),
-        );
-    }
-
-    // Threads ------------------------
-    if let Ok(threads) = dump.get_stream::<MinidumpThreadList>() {
-        summary.insert("thread_count".into(), serde_json::json!(threads.threads.len()));
-
-        let tops: Vec<_> = threads
-            .threads
-            .iter()
-            .map(|t| {
-                if let Ok(ref sys) = sys_stream {
-                    let misc_stream = dump.get_stream::<MinidumpMiscInfo>().ok();
-                    let ctx_opt = t.context(sys, misc_stream.as_ref());
-                    ctx_opt
-                        .map(|c| format!("0x{:x}", c.get_instruction_pointer()))
-                        .unwrap_or_else(|| "N/A".to_string())
-                } else {
-                    "N/A".to_string()
-                }
+                "name": m.get("filename").and_then(|v| v.as_str()).unwrap_or_default(),
+                "base_address": base_addr,
+                "size": size,
+                "version": m.get("version").and_then(|v| v.as_str()).unwrap_or_default(),
             })
-            .collect();
+        })
+        .collect();
 
-        summary.insert("top_frames".into(), serde_json::json!(tops));
-    }
-
-    // ---------------- MiscInfo ----------------
-    if let Ok(misc) = dump.get_stream::<MinidumpMiscInfo>() {
-        // expose fields that are commonly filled (may vary by platform)
-        let mut misc_map = serde_json::Map::new();
-        let raw = &misc.raw;
-        misc_map.insert(
-            "process_create_time".into(),
-            serde_json::json!(raw.process_create_time()),
-        );
-        misc_map.insert(
-            "process_id".into(),
-            serde_json::json!(raw.process_id()),
-        );
-        misc_map.insert(
-            "processor_max_mhz".into(),
-            serde_json::json!(raw.processor_max_mhz()),
-        );
-        misc_map.insert(
-            "processor_current_mhz".into(),
-            serde_json::json!(raw.processor_current_mhz()),
-        );
-        summary.insert("misc_info".into(), serde_json::Value::Object(misc_map));
-    }
-
-    // ---------------- Module list ----------------
-    if let Ok(mods) = dump.get_stream::<MinidumpModuleList>() {
-        let mut modules_json = Vec::new();
-        for m in mods.iter() {
-            modules_json.push(serde_json::json!({
-                "name": m.code_file(),
-                "version": m.version().unwrap_or_default(),
-                "base_address": format!("0x{:x}", m.base_address()),
-                "size": m.size(),
-            }));
+    let summary = serde_json::json!({
+        "memory_regions": json.get("memory_regions").and_then(|v| v.as_u64()).unwrap_or(0),
+        "thread_count": json.get("thread_count").and_then(|v| v.as_u64()).unwrap_or(0),
+        "modules": {
+            "count": modules_list.len(),
+            "list": simplified_modules,
+        },
+        "os": {
+            "cpu": json.pointer("/system_info/cpu_arch").and_then(|v| v.as_str()).unwrap_or(""),
+            "family": json.pointer("/system_info/os").and_then(|v| v.as_str()).unwrap_or(""),
+        },
+        "misc_info": {
+            "process_id": json.get("pid").and_then(|v| v.as_u64()).unwrap_or(0),
+            "process_create_time": json.pointer("/crash_info/address").and_then(|v| v.as_u64()).unwrap_or(0),
+            "processor_current_mhz": serde_json::Value::Null,
+            "processor_max_mhz": serde_json::Value::Null,
         }
-        summary.insert("modules".into(), serde_json::json!({
-            "count": mods.iter().count(),
-            "list": modules_json,
-        }));
-    }
+    });
 
-    // ---------------- Unloaded modules ----------------
-    if let Ok(unloaded) = dump.get_stream::<MinidumpUnloadedModuleList>() {
-        summary.insert("unloaded_module_count".into(), serde_json::json!(unloaded.iter().count()));
-    }
-
-    // ---------------- Memory info ----------------
-    if let Ok(mem_info) = dump.get_stream::<MinidumpMemoryInfoList>() {
-        summary.insert(
-            "memory_regions".into(),
-            serde_json::json!(mem_info.iter().count()),
-        );
-    } else if let Ok(mem_list) = dump.get_stream::<MinidumpMemoryList>() {
-        summary.insert(
-            "memory_regions".into(),
-            serde_json::json!(mem_list.iter().count()),
-        );
-    }
-
-    Ok(serde_json::Value::Object(summary))
+    Ok((json, summary))
 }
 
 // --------------- HTTP Handlers ----------------
@@ -211,14 +166,15 @@ async fn get_crash(id: web::Path<String>) -> impl Responder {
         Err(e) => return HttpResponse::NotFound().body(e.to_string()),
     };
 
-    let minidump_summary = match summarize_minidump(&id) {
-        Ok(v) => Some(v),
-        Err(_) => None, // It is OK if minidump is missing or fails to parse
+    let (minidump_analysis, minidump_summary) = match analyze_minidump(&id).await {
+        Ok((analysis, summary)) => (Some(analysis), Some(summary)),
+        Err(_) => (None, None),
     };
 
     let detail = CrashDetail {
         sentry_report: sentry,
         minidump_summary,
+        minidump_analysis,
     };
     HttpResponse::Ok().json(detail)
 }
