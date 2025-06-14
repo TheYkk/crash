@@ -4,7 +4,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Clock, AlertCircle, Monitor, Package, Layers, Info, Code, Eye, EyeOff, FileJson } from 'lucide-react';
+import { Clock, AlertCircle, Monitor, Package, Layers, Info, Code, Eye, EyeOff, FileJson, Bug, Zap, Activity, Settings, ChevronRight, ExternalLink, Copy, Filter, Search, Calendar, User, Globe, Cpu, HardDrive, MemoryStick } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { Button } from './ui/button';
 
@@ -44,7 +44,6 @@ interface MinidumpThread {
 interface MinidumpAnalysis {
   crashing_thread: MinidumpThread;
   threads: MinidumpThread[];
-  // and a lot more fields that I might use later
 }
 
 interface Module {
@@ -116,7 +115,7 @@ const CrashViewer: React.FC = () => {
   const [detail, setDetail] = useState<CrashDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showSystemFrames, setShowSystemFrames] = useState(true);
+  const [showSystemFrames, setShowSystemFrames] = useState(false);
 
   // fetch list
   useEffect(() => {
@@ -139,382 +138,320 @@ const CrashViewer: React.FC = () => {
 
   const renderStackTrace = (frames: (SentryStackFrame | MinidumpFrame)[]) => {
     const filteredFrames = showSystemFrames ? frames : frames.filter(isAppFrame);
-  
-    let lastModule: string | undefined = '';
-  
+    
     return (
-      <div className="space-y-1">
+      <div className="space-y-0 border rounded-lg overflow-hidden">
         {filteredFrames.map((frame, index) => {
           const isApp = isAppFrame(frame);
           const isMinidumpFrame = 'trust' in frame;
-          const module = isMinidumpFrame ? frame.module : undefined;
-          const moduleChanged = module !== lastModule;
-          lastModule = module;
-  
+          
           const sentryFrame = !isMinidumpFrame ? frame as SentryStackFrame : undefined;
           const minidumpFrame = isMinidumpFrame ? frame as MinidumpFrame : undefined;
-  
-          const funcName = sentryFrame?.function || minidumpFrame?.function || 'unknown';
+          
+          const funcName = sentryFrame?.function || minidumpFrame?.function || '<unknown>';
           const filePath = sentryFrame?.filename || minidumpFrame?.file;
           const line = sentryFrame?.lineno || minidumpFrame?.line;
           const col = sentryFrame?.colno;
           const frameNum = frames.length - index;
           
           return (
-            <React.Fragment key={index}>
-              {moduleChanged && module && (
-                <div className="flex items-center gap-2 pt-4 pb-2">
-                  <Package className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-semibold text-muted-foreground">{module}</span>
-                </div>
-              )}
-              <div className={`p-3 rounded-md ${isApp ? 'bg-primary/5' : ''}`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 space-y-1 overflow-hidden">
-                    <code className={`font-medium truncate ${isApp ? 'text-primary' : 'text-foreground'}`}>
-                      {funcName}
-                    </code>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {formatPath(filePath)}
-                      {line && `:${line}`}
-                      {col && `:${col}`}
+            <div 
+              key={index} 
+              className={`border-b last:border-b-0 ${isApp ? 'bg-blue-50 dark:bg-blue-950/20' : 'bg-background hover:bg-muted/50'} transition-colors`}
+            >
+              <div className="p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs text-muted-foreground font-mono">#{frameNum}</span>
+                      {isApp && <Badge variant="default" className="text-xs">App Frame</Badge>}
+                      {minidumpFrame?.trust && (
+                        <Badge variant="outline" className="text-xs">{minidumpFrame.trust}</Badge>
+                      )}
                     </div>
+                    <div className="font-mono text-sm font-medium text-foreground mb-1 break-all">
+                      {funcName}
+                    </div>
+                    {filePath && (
+                      <div className="text-xs text-muted-foreground font-mono break-all">
+                        {formatPath(filePath)}
+                        {line && <span className="text-blue-600 dark:text-blue-400">:{line}</span>}
+                        {col && <span className="text-blue-600 dark:text-blue-400">:{col}</span>}
+                      </div>
+                    )}
                   </div>
-                  <div className='flex items-center gap-2 pl-4'>
-                    {isApp && <Badge variant="secondary">App</Badge>}
-                    <Badge variant="outline">#{frameNum}</Badge>
-                  </div>
+                  <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100">
+                    <Copy className="w-3 h-3" />
+                  </Button>
                 </div>
               </div>
-            </React.Fragment>
-          )
+            </div>
+          );
         })}
       </div>
     );
-  }
+  };
 
   const renderModules = (modules: Module[]) => (
     <div className="space-y-2">
       {modules.map((module, index) => (
-        <Card key={index} className="p-3">
+        <div key={index} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
           <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <div className="font-medium text-sm">{module.name}</div>
-              <div className="text-xs space-x-4 text-muted-foreground">
-                <span>Base: {module.base_address}</span>
-                <span>Size: {formatBytes(module.size)}</span>
-                {module.version && <span>v{module.version}</span>}
+            <div className="flex-1 min-w-0">
+              <div className="font-mono text-sm font-medium mb-1 break-all">{module.name}</div>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <div>Base: <span className="font-mono">{module.base_address}</span></div>
+                <div>Size: <span className="font-mono">{formatBytes(module.size)}</span></div>
+                {module.version && <div>Version: <span className="font-mono">{module.version}</span></div>}
               </div>
             </div>
-            <Badge variant="secondary">
-              <Package className="w-3 h-3 mr-1" />
-              Module
-            </Badge>
           </div>
-        </Card>
+        </div>
       ))}
     </div>
   );
-  
-  const renderJson = (data: any) => (
-    <Card>
-      <CardContent className='p-0'>
-        <ScrollArea className="h-[calc(100vh-480px)]">
-          <pre className="text-xs p-4">
-            {JSON.stringify(data, null, 2)}
-          </pre>
-        </ScrollArea>
-      </CardContent>
-    </Card>
-  )
 
-
-  return (
-    <div className="flex h-screen bg-background text-foreground">
-      {/* Sidebar */}
-      <div className="w-1/3 border-r border-border flex flex-col">
-        <Card className="rounded-none border-0 border-b">
-          <CardHeader>
-            <div className='flex justify-between items-center'>
-                <CardTitle className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5" />
-                Crash Reports
-                </CardTitle>
-                <ThemeToggle />
+  const renderCrashHeader = (detail: CrashDetail) => (
+    <div className="border-b bg-background">
+      <div className="p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-lg">
+              <Bug className="w-6 h-6 text-red-600 dark:text-red-400" />
             </div>
-            <CardDescription>
-              {crashes.length} crash{crashes.length !== 1 ? 'es' : ''} found
-            </CardDescription>
-          </CardHeader>
-        </Card>
-        <ScrollArea className="flex-1">
-            <div className="p-4 space-y-2">
-            {crashes.map((crash) => (
-                <Card
-                key={crash.id}
-                className={`cursor-pointer transition-colors hover:bg-accent ${
-                    selected === crash.id ? 'bg-accent border-primary' : ''
-                }`}
-                onClick={() => setSelected(crash.id)}
-                >
-                <CardContent className="p-4">
-                    <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                        <Badge variant="destructive">CRASH</Badge>
-                        <div className="flex items-center text-xs text-muted-foreground">
-                        <Clock className="w-3 h-3 mr-1" />
-                        {crash.timestamp && formatTimestamp(crash.timestamp)}
-                        </div>
-                    </div>
-                    <div className="font-mono text-xs truncate text-muted-foreground">
-                        {crash.id}
-                    </div>
-                    <div className="text-sm font-medium line-clamp-2">
-                        {crash.message || 'No message available'}
-                    </div>
-                    </div>
-                </CardContent>
-                </Card>
-            ))}
-            </div>
-        </ScrollArea>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1">
-        {loading && (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-muted-foreground">Loading crash details...</div>
-          </div>
-        )}
-
-        {error && (
-          <Card className="m-4">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-2 text-destructive">
-                <AlertCircle className="w-5 h-5" />
-                <span className="font-medium">Error: {error}</span>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {!selected && !loading && !error && (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            <div className="text-center">
-              <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>Select a crash report to view details</p>
-            </div>
-          </div>
-        )}
-
-        {detail && !loading && (
-          <div className="h-full">
-            <div className="p-6 border-b border-border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold flex items-center gap-2">
-                    <AlertCircle className="w-6 h-6 text-destructive" />
-                    Crash Report
-                  </h1>
-                  <p className="text-muted-foreground font-mono text-sm">
-                    {detail.sentry_report.event_id}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Badge variant="destructive" className="capitalize">
-                    {detail.sentry_report.level}
-                  </Badge>
-                  <Badge variant="outline" className="capitalize">
-                    {detail.sentry_report.platform}
-                  </Badge>
-                </div>
-              </div>
-              
-              <div className="mt-4 p-4 bg-muted rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <Info className="w-4 h-4" />
-                  <span className="font-medium">Error Message</span>
-                </div>
-                <p className="text-sm">{detail.sentry_report.message}</p>
-                <div className="flex items-center mt-2 text-xs text-muted-foreground">
-                  <Clock className="w-3 h-3 mr-1" />
+            <div>
+              <h1 className="text-2xl font-semibold text-foreground">
+                {detail.sentry_report.message || 'Application Crash'}
+              </h1>
+              <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
                   {formatTimestamp(detail.sentry_report.timestamp)}
                 </div>
+                <div className="flex items-center gap-1">
+                  <Globe className="w-4 h-4" />
+                  {detail.sentry_report.platform}
+                </div>
+                <div className="flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {detail.sentry_report.level}
+                </div>
               </div>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm">
+              <ExternalLink className="w-4 h-4 mr-2" />
+              View Raw
+            </Button>
+            <Button variant="outline" size="sm">
+              <Copy className="w-4 h-4 mr-2" />
+              Copy ID
+            </Button>
+          </div>
+        </div>
+        
+        {detail.minidump_summary && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-muted/50 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Cpu className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">CPU</span>
+              </div>
+              <div className="text-sm font-mono">{detail.minidump_summary.os.cpu}</div>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Activity className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">Threads</span>
+              </div>
+              <div className="text-sm font-mono">{detail.minidump_summary.thread_count}</div>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Package className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">Modules</span>
+              </div>
+              <div className="text-sm font-mono">{detail.minidump_summary.modules.count}</div>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <MemoryStick className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">Process ID</span>
+              </div>
+              <div className="text-sm font-mono">{detail.minidump_summary.misc_info.process_id}</div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
-            <div className="p-6">
-              <Tabs defaultValue="stacktrace" className="h-[calc(100vh-300px)]">
-                <TabsList className="grid w-full grid-cols-5">
-                  <TabsTrigger value="stacktrace">Stack Trace</TabsTrigger>
-                  <TabsTrigger value="modules">Modules</TabsTrigger>
-                  <TabsTrigger value="system">System Info</TabsTrigger>
-                  <TabsTrigger value="process">Process Info</TabsTrigger>
-                  <TabsTrigger value="raw">Raw Data</TabsTrigger>
-                </TabsList>
+  const renderSidebar = () => (
+    <div className="w-80 border-r bg-background flex flex-col">
+      <div className="p-4 border-b">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Bug className="w-5 h-5" />
+            Crash Reports
+          </h2>
+          <ThemeToggle />
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input 
+            type="text" 
+            placeholder="Search crashes..." 
+            className="w-full pl-10 pr-4 py-2 text-sm border rounded-md bg-background"
+          />
+        </div>
+      </div>
+      
+      <ScrollArea className="flex-1">
+        <div className="p-2">
+          {crashes.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Bug className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No crashes found</p>
+            </div>
+          ) : (
+            crashes.map((crash) => (
+              <div
+                key={crash.id}
+                onClick={() => setSelected(crash.id)}
+                className={`p-3 rounded-lg cursor-pointer transition-colors mb-2 ${
+                  selected === crash.id 
+                    ? 'bg-primary/10 border border-primary/20' 
+                    : 'hover:bg-muted/50 border border-transparent'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                      <span className="text-xs font-mono text-muted-foreground truncate">
+                        {crash.id.slice(0, 8)}...
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium text-foreground truncate mb-1">
+                      {crash.message || 'Application Crash'}
+                    </p>
+                    {crash.timestamp && (
+                      <p className="text-xs text-muted-foreground">
+                        {formatTimestamp(crash.timestamp)}
+                      </p>
+                    )}
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  );
 
-                <TabsContent value="stacktrace" className="h-full">
-                  <Card className="h-full">
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="flex items-center gap-2">
-                                <Layers className="w-4 h-4" />
-                                Stack Trace ({
-                                  detail.minidump_analysis?.crashing_thread?.frames?.length ||
-                                  detail.sentry_report?.stacktrace?.frames?.length || 0
-                                } frames)
-                            </CardTitle>
-                            <Button variant="outline" size="sm" onClick={() => setShowSystemFrames(!showSystemFrames)}>
-                                {showSystemFrames ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
-                                {showSystemFrames ? 'Hide' : 'Show'} System Frames
-                            </Button>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                      <ScrollArea className="h-[calc(100vh-480px)]">
-                        {renderStackTrace(
-                          detail.minidump_analysis?.crashing_thread?.frames ||
-                          [...(detail.sentry_report?.stacktrace?.frames || [])].reverse()
-                        )}
-                      </ScrollArea>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="raw" className="h-full">
-                  <Tabs defaultValue="sentry">
-                    <TabsList>
-                      <TabsTrigger value="sentry">Sentry Report</TabsTrigger>
-                      <TabsTrigger value="minidump">Minidump Analysis</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="sentry">
-                      {renderJson(detail.sentry_report)}
-                    </TabsContent>
-                    <TabsContent value="minidump">
-                      {renderJson(detail.minidump_analysis)}
-                    </TabsContent>
-                  </Tabs>
-                </TabsContent>
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Error Loading Crashes</h2>
+          <p className="text-muted-foreground">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
-                <TabsContent value="modules" className="h-full">
-                  <Card className="h-full">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
+  return (
+    <div className="min-h-screen bg-background flex">
+      {renderSidebar()}
+      
+      <div className="flex-1 flex flex-col">
+        {!selected ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <Bug className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold mb-2">Select a Crash Report</h2>
+              <p className="text-muted-foreground">Choose a crash from the sidebar to view details</p>
+            </div>
+          </div>
+        ) : loading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading crash details...</p>
+            </div>
+          </div>
+        ) : detail ? (
+          <div className="flex-1 flex flex-col">
+            {renderCrashHeader(detail)}
+            
+            <div className="flex-1 p-6">
+              <Tabs defaultValue="stacktrace" className="h-full flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <TabsList>
+                    <TabsTrigger value="stacktrace" className="flex items-center gap-2">
+                      <Layers className="w-4 h-4" />
+                      Stack Trace
+                    </TabsTrigger>
+                    {detail.minidump_summary && (
+                      <TabsTrigger value="modules" className="flex items-center gap-2">
                         <Package className="w-4 h-4" />
-                        Loaded Modules ({detail.minidump_summary?.modules?.count || 0})
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ScrollArea className="h-[calc(100vh-480px)]">
-                        {detail.minidump_summary?.modules?.list && 
-                          renderModules(detail.minidump_summary.modules.list)}
+                        Modules ({detail.minidump_summary.modules.count})
+                      </TabsTrigger>
+                    )}
+                    <TabsTrigger value="raw" className="flex items-center gap-2">
+                      <FileJson className="w-4 h-4" />
+                      Raw Data
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowSystemFrames(!showSystemFrames)}
+                      className="flex items-center gap-2"
+                    >
+                      {showSystemFrames ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showSystemFrames ? 'Hide' : 'Show'} System Frames
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <Filter className="w-4 h-4 mr-2" />
+                      Filter
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-hidden">
+                  <TabsContent value="stacktrace" className="h-full">
+                    <ScrollArea className="h-full">
+                      {renderStackTrace(detail.sentry_report.stacktrace.frames)}
+                    </ScrollArea>
+                  </TabsContent>
+
+                  {detail.minidump_summary && (
+                    <TabsContent value="modules" className="h-full">
+                      <ScrollArea className="h-full">
+                        {renderModules(detail.minidump_summary.modules.list)}
                       </ScrollArea>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                    </TabsContent>
+                  )}
 
-                <TabsContent value="system" className="h-full">
-                  <Card className="h-full">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Monitor className="w-4 h-4" />
-                        System Information
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {detail.minidump_summary?.os && (
-                        <div className="grid grid-cols-2 gap-4">
-                          <Card className="p-4">
-                            <div className="space-y-2">
-                              <div className="font-medium">Operating System</div>
-                              <div className="text-sm text-muted-foreground">
-                                {detail.minidump_summary.os.family}
-                              </div>
-                            </div>
-                          </Card>
-                          <Card className="p-4">
-                            <div className="space-y-2">
-                              <div className="font-medium">CPU Architecture</div>
-                              <div className="text-sm text-muted-foreground">
-                                {detail.minidump_summary.os.cpu}
-                              </div>
-                            </div>
-                          </Card>
-                          <Card className="p-4">
-                            <div className="space-y-2">
-                              <div className="font-medium">Memory Regions</div>
-                              <div className="text-sm text-muted-foreground">
-                                {detail.minidump_summary.memory_regions}
-                              </div>
-                            </div>
-                          </Card>
-                          <Card className="p-4">
-                            <div className="space-y-2">
-                              <div className="font-medium">Thread Count</div>
-                              <div className="text-sm text-muted-foreground">
-                                {detail.minidump_summary.thread_count}
-                              </div>
-                            </div>
-                          </Card>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="process" className="h-full">
-                  <Card className="h-full">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Info className="w-4 h-4" />
-                        Process Information
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {detail.minidump_summary?.misc_info && (
-                        <div className="grid grid-cols-2 gap-4">
-                          <Card className="p-4">
-                            <div className="space-y-2">
-                              <div className="font-medium">Process ID</div>
-                              <div className="text-sm text-muted-foreground font-mono">
-                                {detail.minidump_summary.misc_info.process_id}
-                              </div>
-                            </div>
-                          </Card>
-                          <Card className="p-4">
-                            <div className="space-y-2">
-                              <div className="font-medium">Create Time</div>
-                              <div className="text-sm text-muted-foreground">
-                                {formatTimestamp(detail.minidump_summary.misc_info.process_create_time.toString())}
-                              </div>
-                            </div>
-                          </Card>
-                          <Card className="p-4">
-                            <div className="space-y-2">
-                              <div className="font-medium">Current CPU MHz</div>
-                              <div className="text-sm text-muted-foreground">
-                                {detail.minidump_summary.misc_info.processor_current_mhz || 'N/A'}
-                              </div>
-                            </div>
-                          </Card>
-                          <Card className="p-4">
-                            <div className="space-y-2">
-                              <div className="font-medium">Max CPU MHz</div>
-                              <div className="text-sm text-muted-foreground">
-                                {detail.minidump_summary.misc_info.processor_max_mhz || 'N/A'}
-                              </div>
-                            </div>
-                          </Card>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                  <TabsContent value="raw" className="h-full">
+                    <ScrollArea className="h-full">
+                      <pre className="text-xs bg-muted/50 p-4 rounded-lg overflow-auto">
+                        {JSON.stringify(detail, null, 2)}
+                      </pre>
+                    </ScrollArea>
+                  </TabsContent>
+                </div>
               </Tabs>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

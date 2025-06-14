@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "tw-animate-css";
 
 @layer base {
   :root {
@@ -51,10 +50,10 @@
 
 @layer base {
   * {
-    @apply border-border;
+    /* @reference border-border; */
   }
   body {
-    @apply bg-background text-foreground;
+    /* @reference bg-background text-foreground; */
     font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   }
 }
