@@ -4,7 +4,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Clock, AlertCircle, Monitor, Package, Layers, Info, Code, Eye, EyeOff } from 'lucide-react';
+import { Clock, AlertCircle, Monitor, Package, Layers, Info, Code, Eye, EyeOff, FileJson } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { Button } from './ui/button';
 
@@ -14,11 +14,37 @@ interface CrashSummary {
   message?: string;
 }
 
-interface StackFrame {
+interface SentryStackFrame {
   function: string;
   filename?: string;
   lineno?: number;
   colno?: number;
+}
+
+interface MinidumpFrame {
+  frame: number;
+  trust: string;
+  offset: string;
+  module?: string;
+  module_offset?: string;
+  function?: string;
+  function_offset?: string;
+  file?: string;
+  line?: number;
+  registers?: Record<string, string>;
+}
+
+interface MinidumpThread {
+  thread_id: number;
+  thread_name?: string;
+  frame_count: number;
+  frames: MinidumpFrame[];
+}
+
+interface MinidumpAnalysis {
+  crashing_thread: MinidumpThread;
+  threads: MinidumpThread[];
+  // and a lot more fields that I might use later
 }
 
 interface Module {
@@ -36,7 +62,7 @@ interface CrashDetail {
     platform: string;
     timestamp: string;
     stacktrace: {
-      frames: StackFrame[];
+      frames: SentryStackFrame[];
     };
   };
   minidump_summary?: {
@@ -57,6 +83,7 @@ interface CrashDetail {
       processor_max_mhz: number;
     };
   };
+  minidump_analysis?: MinidumpAnalysis;
 }
 
 const formatTimestamp = (timestamp: string) => {
@@ -73,8 +100,9 @@ const formatBytes = (bytes: number) => {
 
 const projectRoot = '/Users/kaan/working/rust/crash/';
 
-const isAppFrame = (frame: StackFrame) => {
-  return frame.filename && frame.filename.startsWith(projectRoot);
+const isAppFrame = (frame: { filename?: string, file?: string}) => {
+  const path = frame.filename || frame.file;
+  return path && path.startsWith(projectRoot);
 }
 
 const formatPath = (path: string | undefined) => {
@@ -109,46 +137,59 @@ const CrashViewer: React.FC = () => {
       .finally(() => setLoading(false));
   }, [selected]);
 
-  const renderStackTrace = (frames: StackFrame[]) => {
+  const renderStackTrace = (frames: (SentryStackFrame | MinidumpFrame)[]) => {
     const filteredFrames = showSystemFrames ? frames : frames.filter(isAppFrame);
+  
+    let lastModule: string | undefined = '';
+  
     return (
-        <div className="space-y-2">
+      <div className="space-y-1">
         {filteredFrames.map((frame, index) => {
-            const isApp = isAppFrame(frame);
-            return (
-                <Card key={index} className={`p-3 ${isApp ? 'border-primary/50 bg-primary/5' : ''}`}>
-                <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                    <code className={`text-sm font-medium ${isApp ? 'text-primary' : 'text-foreground'}`}>
-                        {frame.function}
-                    </code>
-                    <div className='flex items-center gap-2'>
-                        {isApp && <Badge variant="secondary">App</Badge>}
-                        <Badge variant="outline">#{frames.length - index}</Badge>
-                    </div>
-                    </div>
-                    {frame.filename && (
-                    <div className="text-xs text-muted-foreground">
-                        <span className="font-medium">File:</span> {formatPath(frame.filename)}
-                        {frame.lineno && (
-                        <>
-                            <span className="mx-1">•</span>
-                            <span className="font-medium">Line:</span> {frame.lineno}
-                        </>
-                        )}
-                        {frame.colno && (
-                        <>
-                            <span className="mx-1">•</span>
-                            <span className="font-medium">Col:</span> {frame.colno}
-                        </>
-                        )}
-                    </div>
-                    )}
+          const isApp = isAppFrame(frame);
+          const isMinidumpFrame = 'trust' in frame;
+          const module = isMinidumpFrame ? frame.module : undefined;
+          const moduleChanged = module !== lastModule;
+          lastModule = module;
+  
+          const sentryFrame = !isMinidumpFrame ? frame as SentryStackFrame : undefined;
+          const minidumpFrame = isMinidumpFrame ? frame as MinidumpFrame : undefined;
+  
+          const funcName = sentryFrame?.function || minidumpFrame?.function || 'unknown';
+          const filePath = sentryFrame?.filename || minidumpFrame?.file;
+          const line = sentryFrame?.lineno || minidumpFrame?.line;
+          const col = sentryFrame?.colno;
+          const frameNum = frames.length - index;
+          
+          return (
+            <React.Fragment key={index}>
+              {moduleChanged && module && (
+                <div className="flex items-center gap-2 pt-4 pb-2">
+                  <Package className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold text-muted-foreground">{module}</span>
                 </div>
-                </Card>
-            )
+              )}
+              <div className={`p-3 rounded-md ${isApp ? 'bg-primary/5' : ''}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 space-y-1 overflow-hidden">
+                    <code className={`font-medium truncate ${isApp ? 'text-primary' : 'text-foreground'}`}>
+                      {funcName}
+                    </code>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {formatPath(filePath)}
+                      {line && `:${line}`}
+                      {col && `:${col}`}
+                    </div>
+                  </div>
+                  <div className='flex items-center gap-2 pl-4'>
+                    {isApp && <Badge variant="secondary">App</Badge>}
+                    <Badge variant="outline">#{frameNum}</Badge>
+                  </div>
+                </div>
+              </div>
+            </React.Fragment>
+          )
         })}
-        </div>
+      </div>
     );
   }
 
@@ -174,6 +215,19 @@ const CrashViewer: React.FC = () => {
       ))}
     </div>
   );
+  
+  const renderJson = (data: any) => (
+    <Card>
+      <CardContent className='p-0'>
+        <ScrollArea className="h-[calc(100vh-480px)]">
+          <pre className="text-xs p-4">
+            {JSON.stringify(data, null, 2)}
+          </pre>
+        </ScrollArea>
+      </CardContent>
+    </Card>
+  )
+
 
   return (
     <div className="flex h-screen bg-background text-foreground">
@@ -292,11 +346,12 @@ const CrashViewer: React.FC = () => {
 
             <div className="p-6">
               <Tabs defaultValue="stacktrace" className="h-[calc(100vh-300px)]">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="stacktrace">Stack Trace</TabsTrigger>
                   <TabsTrigger value="modules">Modules</TabsTrigger>
                   <TabsTrigger value="system">System Info</TabsTrigger>
                   <TabsTrigger value="process">Process Info</TabsTrigger>
+                  <TabsTrigger value="raw">Raw Data</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="stacktrace" className="h-full">
@@ -305,7 +360,10 @@ const CrashViewer: React.FC = () => {
                         <div className="flex items-center justify-between">
                             <CardTitle className="flex items-center gap-2">
                                 <Layers className="w-4 h-4" />
-                                Stack Trace ({detail.sentry_report.stacktrace.frames.length} frames)
+                                Stack Trace ({
+                                  detail.minidump_analysis?.crashing_thread?.frames?.length ||
+                                  detail.sentry_report?.stacktrace?.frames?.length || 0
+                                } frames)
                             </CardTitle>
                             <Button variant="outline" size="sm" onClick={() => setShowSystemFrames(!showSystemFrames)}>
                                 {showSystemFrames ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
@@ -315,10 +373,28 @@ const CrashViewer: React.FC = () => {
                     </CardHeader>
                     <CardContent>
                       <ScrollArea className="h-[calc(100vh-480px)]">
-                        {renderStackTrace(detail.sentry_report.stacktrace.frames.reverse())}
+                        {renderStackTrace(
+                          detail.minidump_analysis?.crashing_thread?.frames ||
+                          [...(detail.sentry_report?.stacktrace?.frames || [])].reverse()
+                        )}
                       </ScrollArea>
                     </CardContent>
                   </Card>
+                </TabsContent>
+                
+                <TabsContent value="raw" className="h-full">
+                  <Tabs defaultValue="sentry">
+                    <TabsList>
+                      <TabsTrigger value="sentry">Sentry Report</TabsTrigger>
+                      <TabsTrigger value="minidump">Minidump Analysis</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="sentry">
+                      {renderJson(detail.sentry_report)}
+                    </TabsContent>
+                    <TabsContent value="minidump">
+                      {renderJson(detail.minidump_analysis)}
+                    </TabsContent>
+                  </Tabs>
                 </TabsContent>
 
                 <TabsContent value="modules" className="h-full">
@@ -326,12 +402,12 @@ const CrashViewer: React.FC = () => {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Package className="w-4 h-4" />
-                        Loaded Modules ({detail.minidump_summary?.modules.count || 0})
+                        Loaded Modules ({detail.minidump_summary?.modules?.count || 0})
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <ScrollArea className="h-[calc(100vh-480px)]">
-                        {detail.minidump_summary?.modules.list && 
+                        {detail.minidump_summary?.modules?.list && 
                           renderModules(detail.minidump_summary.modules.list)}
                       </ScrollArea>
                     </CardContent>
