@@ -1,0 +1,5 @@
+# Ignore Rust build artifacts and cache
+target/
+
+# Ignore Cargo lock file if desired (though often committed)
+# Cargo.lock

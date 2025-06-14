@@ -1,0 +1,167 @@
+{
+  "event_id": "436f2159-72bd-4883-9d1b-7a4fadd72bdd",
+  "timestamp": "1749914527.124804",
+  "message": "This is a test panic from the application!",
+  "level": "fatal",
+  "platform": "rust",
+  "stacktrace": {
+    "frames": [
+      {
+        "filename": null,
+        "lineno": null,
+        "colno": null,
+        "function": "_start"
+      },
+      {
+        "filename": null,
+        "lineno": null,
+        "colno": null,
+        "function": "__libc_start_main"
+      },
+      {
+        "filename": null,
+        "lineno": null,
+        "colno": null,
+        "function": "main"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/std/src/rt.rs",
+        "lineno": 166,
+        "colno": 17,
+        "function": "std::rt::lang_start::hb0af222ff2bd80ef"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/std/src/rt.rs",
+        "lineno": 148,
+        "colno": 20,
+        "function": "std::rt::lang_start_internal::h8fc8e9636333b06e"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/std/src/panic.rs",
+        "lineno": 142,
+        "colno": 14,
+        "function": "std::panic::catch_unwind::hd66d6c526b1a6302"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/std/src/panicking.rs",
+        "lineno": 516,
+        "colno": 19,
+        "function": "std::panicking::try::h0cc643a8ace88736"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/std/src/panicking.rs",
+        "lineno": 552,
+        "colno": 40,
+        "function": "std::panicking::try::do_call::hbfe6916f1cc74e35"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/std/src/rt.rs",
+        "lineno": 148,
+        "colno": 48,
+        "function": "std::rt::lang_start_internal::{{closure}}::hd36869a5192571c4"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/std/src/panic.rs",
+        "lineno": 142,
+        "colno": 14,
+        "function": "std::panic::catch_unwind::h0a8f78f1f5633cdb"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/std/src/panicking.rs",
+        "lineno": 516,
+        "colno": 19,
+        "function": "std::panicking::try::h3d219ee83761ccf8"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/std/src/panicking.rs",
+        "lineno": 552,
+        "colno": 40,
+        "function": "std::panicking::try::do_call::h6f884a82d660d639"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/core/src/ops/function.rs",
+        "lineno": 284,
+        "colno": 13,
+        "function": "core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once::h2a98286140a8c485"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/std/src/rt.rs",
+        "lineno": 167,
+        "colno": 18,
+        "function": "std::rt::lang_start::{{closure}}::h96e597cf7d74a93d"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/std/src/sys_common/backtrace.rs",
+        "lineno": 154,
+        "colno": 18,
+        "function": "std::sys_common::backtrace::__rust_begin_short_backtrace::hd89983ba22d82598"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/core/src/ops/function.rs",
+        "lineno": 250,
+        "colno": 5,
+        "function": "core::ops::function::FnOnce::call_once::h99e475e9193c746f"
+      },
+      {
+        "filename": "/app/src/main.rs",
+        "lineno": 138,
+        "colno": 5,
+        "function": "app::main::h9a661c90448ca6a3"
+      },
+      {
+        "filename": "/app/src/main.rs",
+        "lineno": 132,
+        "colno": 5,
+        "function": "app::cause_panic::h12cf5822e65b988f"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/core/src/panicking.rs",
+        "lineno": 72,
+        "colno": 14,
+        "function": "core::panicking::panic_fmt::hef0307862026e6f9"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/std/src/panicking.rs",
+        "lineno": 645,
+        "colno": 5,
+        "function": "rust_begin_unwind"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/std/src/sys_common/backtrace.rs",
+        "lineno": 170,
+        "colno": 18,
+        "function": "std::sys_common::backtrace::__rust_end_short_backtrace::h813561fdec15f700"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/std/src/panicking.rs",
+        "lineno": 649,
+        "colno": 13,
+        "function": "std::panicking::begin_panic_handler::{{closure}}::h3a9eaa1d23ecf555"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/std/src/panicking.rs",
+        "lineno": 783,
+        "colno": 13,
+        "function": "std::panicking::rust_panic_with_hook::h2a988919dd121561"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/alloc/src/boxed.rs",
+        "lineno": 2021,
+        "colno": 9,
+        "function": "<alloc::boxed::Box<F,A> as core::ops::function::Fn<Args>>::call::h07b7c459dd907e43"
+      },
+      {
+        "filename": "/build/rustc-ntAYxy/rustc-1.75.0+dfsg0ubuntu1/library/core/src/ops/function.rs",
+        "lineno": 79,
+        "colno": 5,
+        "function": "core::ops::function::Fn::call::h6928d7ceb6d68875"
+      },
+      {
+        "filename": "/app/src/main.rs",
+        "lineno": 63,
+        "colno": 14,
+        "function": "app::custom_panic_hook::hdd203478a442d10b"
+      }
+    ]
+  }
+}
