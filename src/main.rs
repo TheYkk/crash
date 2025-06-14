@@ -10,6 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 use std::fs::File;
 use std::io::Write;
+use minidump_writer::minidump_writer::MinidumpWriter;
 
 // Represents a single frame in a stack trace, compatible with Sentry's format.
 #[derive(Serialize, Debug)]
@@ -150,6 +151,24 @@ fn custom_panic_hook(info: &std::panic::PanicInfo) {
         }
         Err(e) => {
             eprintln!("Failed to create crash report file '{}': {}", filename, e);
+        }
+    }
+
+    // ---------- New: Generate a Breakpad-compatible minidump ----------
+    let dump_filename = format!("crash_dump_{}.dmp", sentry_event.event_id);
+    let mut writer = MinidumpWriter::new(None, None);
+    match File::create(&dump_filename) {
+        Ok(mut dump_file) => {
+            if let Err(e) = writer.dump(&mut dump_file) {
+                eprintln!("Failed to write minidump '{}': {:?}", dump_filename, e);
+            } else if let Ok(path) = std::fs::canonicalize(&dump_filename) {
+                println!("Minidump saved to {}", path.display());
+            } else {
+                println!("Minidump saved to {}", dump_filename);
+            }
+        }
+        Err(e) => {
+            eprintln!("Failed to create minidump file '{}': {}", dump_filename, e);
         }
     }
 }

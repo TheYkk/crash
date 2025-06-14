@@ -1,0 +1,185 @@
+{
+  "event_id": "36eb63c1-ea15-4398-a6b6-afb9714b9398",
+  "timestamp": "1749917803.011635",
+  "message": "This is a test panic from the application!",
+  "level": "fatal",
+  "platform": "rust",
+  "stacktrace": {
+    "frames": [
+      {
+        "filename": null,
+        "lineno": null,
+        "colno": null,
+        "function": "_main"
+      },
+      {
+        "filename": "/Users/kaan/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/rt.rs",
+        "lineno": 198,
+        "colno": 5,
+        "function": "std::rt::lang_start::h000d3577843770d9"
+      },
+      {
+        "filename": "/rustc/17067e9ac6d7ecb70e50f92c1944e545188d2359/library/std/src/rt.rs",
+        "lineno": 164,
+        "colno": 5,
+        "function": "std::rt::lang_start_internal::hdff9e551ec0db2ea"
+      },
+      {
+        "filename": "/rustc/17067e9ac6d7ecb70e50f92c1944e545188d2359/library/std/src/panic.rs",
+        "lineno": 359,
+        "colno": 14,
+        "function": "std::panic::catch_unwind::h9b9d0c41a72d924b"
+      },
+      {
+        "filename": "/rustc/17067e9ac6d7ecb70e50f92c1944e545188d2359/library/std/src/panicking.rs",
+        "lineno": 552,
+        "colno": 19,
+        "function": "std::panicking::try::h5942a7c8254326a3"
+      },
+      {
+        "filename": "/rustc/17067e9ac6d7ecb70e50f92c1944e545188d2359/library/std/src/panicking.rs",
+        "lineno": 589,
+        "colno": 40,
+        "function": "std::panicking::try::do_call::h5c24223eef24357f"
+      },
+      {
+        "filename": "/rustc/17067e9ac6d7ecb70e50f92c1944e545188d2359/library/std/src/rt.rs",
+        "lineno": 168,
+        "colno": 24,
+        "function": "std::rt::lang_start_internal::{{closure}}::ha5e635a952a4146a"
+      },
+      {
+        "filename": "/rustc/17067e9ac6d7ecb70e50f92c1944e545188d2359/library/std/src/panic.rs",
+        "lineno": 359,
+        "colno": 14,
+        "function": "std::panic::catch_unwind::hfba9e8aea6ea1d44"
+      },
+      {
+        "filename": "/rustc/17067e9ac6d7ecb70e50f92c1944e545188d2359/library/std/src/panicking.rs",
+        "lineno": 552,
+        "colno": 19,
+        "function": "std::panicking::try::h65274237ad573fed"
+      },
+      {
+        "filename": "/rustc/17067e9ac6d7ecb70e50f92c1944e545188d2359/library/std/src/panicking.rs",
+        "lineno": 589,
+        "colno": 40,
+        "function": "std::panicking::try::do_call::ha5656d49188e7f80"
+      },
+      {
+        "filename": "/rustc/17067e9ac6d7ecb70e50f92c1944e545188d2359/library/core/src/ops/function.rs",
+        "lineno": 284,
+        "colno": 13,
+        "function": "core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once::h05562602ade80278"
+      },
+      {
+        "filename": "/Users/kaan/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/rt.rs",
+        "lineno": 199,
+        "colno": 18,
+        "function": "std::rt::lang_start::{{closure}}::hd1fe54b90e95935d"
+      },
+      {
+        "filename": "/Users/kaan/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs",
+        "lineno": 152,
+        "colno": 18,
+        "function": "std::sys::backtrace::__rust_begin_short_backtrace::h72ebfc5d2d1ca471"
+      },
+      {
+        "filename": "/Users/kaan/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/ops/function.rs",
+        "lineno": 250,
+        "colno": 5,
+        "function": "core::ops::function::FnOnce::call_once::hfebada999ade409b"
+      },
+      {
+        "filename": "/Users/kaan/working/rust/crash/src/main.rs",
+        "lineno": 191,
+        "colno": 5,
+        "function": "app::main::ha0d19f98cdddc920"
+      },
+      {
+        "filename": "/Users/kaan/working/rust/crash/src/main.rs",
+        "lineno": 178,
+        "colno": 5,
+        "function": "app::cause_panic::he8a8cc4d82f9647a"
+      },
+      {
+        "filename": "/rustc/17067e9ac6d7ecb70e50f92c1944e545188d2359/library/core/src/panicking.rs",
+        "lineno": 75,
+        "colno": 14,
+        "function": "core::panicking::panic_fmt::h529fda7ea817ba4f"
+      },
+      {
+        "filename": "/rustc/17067e9ac6d7ecb70e50f92c1944e545188d2359/library/std/src/panicking.rs",
+        "lineno": 697,
+        "colno": 5,
+        "function": "__rustc[95feac21a9532783]::rust_begin_unwind"
+      },
+      {
+        "filename": "/rustc/17067e9ac6d7ecb70e50f92c1944e545188d2359/library/std/src/sys/backtrace.rs",
+        "lineno": 168,
+        "colno": 18,
+        "function": "std::sys::backtrace::__rust_end_short_backtrace::h6ede323c05a76849"
+      },
+      {
+        "filename": "/rustc/17067e9ac6d7ecb70e50f92c1944e545188d2359/library/std/src/panicking.rs",
+        "lineno": 699,
+        "colno": 13,
+        "function": "std::panicking::begin_panic_handler::{{closure}}::h39275ef3005e6337"
+      },
+      {
+        "filename": "/rustc/17067e9ac6d7ecb70e50f92c1944e545188d2359/library/std/src/panicking.rs",
+        "lineno": 841,
+        "colno": 13,
+        "function": "std::panicking::rust_panic_with_hook::h1882a30575fbb763"
+      },
+      {
+        "filename": "/rustc/17067e9ac6d7ecb70e50f92c1944e545188d2359/library/alloc/src/boxed.rs",
+        "lineno": 1980,
+        "colno": 9,
+        "function": "<alloc::boxed::Box<F,A> as core::ops::function::Fn<Args>>::call::h64fe88bfc207c235"
+      },
+      {
+        "filename": "/Users/kaan/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/ops/function.rs",
+        "lineno": 79,
+        "colno": 5,
+        "function": "core::ops::function::Fn::call::ha99b6fdbbe814f48"
+      },
+      {
+        "filename": "/Users/kaan/working/rust/crash/src/main.rs",
+        "lineno": 82,
+        "colno": 14,
+        "function": "app::custom_panic_hook::hc64ef405c2178a0e"
+      },
+      {
+        "filename": "/Users/kaan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backtrace-0.3.68/src/capture.rs",
+        "lineno": 140,
+        "colno": 22,
+        "function": "backtrace::capture::Backtrace::new::h0edc81e425870daf"
+      },
+      {
+        "filename": "/Users/kaan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backtrace-0.3.68/src/capture.rs",
+        "lineno": 176,
+        "colno": 9,
+        "function": "backtrace::capture::Backtrace::create::hfb848ed596d146e4"
+      },
+      {
+        "filename": "/Users/kaan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backtrace-0.3.68/src/backtrace/mod.rs",
+        "lineno": 53,
+        "colno": 14,
+        "function": "backtrace::backtrace::trace::hf55f7cb039cd08f1"
+      },
+      {
+        "filename": "/Users/kaan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backtrace-0.3.68/src/backtrace/mod.rs",
+        "lineno": 66,
+        "colno": 5,
+        "function": "backtrace::backtrace::trace_unsynchronized::h2a38e8a8e0620fd7"
+      },
+      {
+        "filename": "/Users/kaan/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/backtrace-0.3.68/src/backtrace/libunwind.rs",
+        "lineno": 93,
+        "colno": 5,
+        "function": "backtrace::backtrace::libunwind::trace::h5a73acdbfa1ce3c6"
+      }
+    ]
+  }
+}
